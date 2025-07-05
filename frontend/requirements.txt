@@ -1,0 +1,6 @@
+react-toastify
+react-bootstrap
+axios
+Dexie
+lz-string
+fingerprintjs2npm 

@@ -1,0 +1,32 @@
+{
+  "title": "Exam App",
+  "short_name": "Exam App", 
+  "name": "Exam App",
+  "icons": [
+    {
+      "src": "icons/exam-icon-64.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/exam-icon-128.png",
+      "type": "image/png",
+      "sizes": "128x128"
+    },
+    {
+      "src": "icons/exam-icon-256.png",
+      "type": "image/png",
+      "sizes": "256x256"
+    },
+    {
+      "src": "icons/exam-icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "scope": ".", 
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

@@ -1,0 +1,203 @@
+.cont-exam {
+    min-width: 920px;
+    scrollbar-width: thin; 
+    scrollbar-color: #333 #eee; 
+}
+.cont-header {
+  min-height: 80px;
+  max-height: 80px;
+  height: 80px;
+}
+.css-col-countdown {
+  display: flex;
+  padding: 2px;;
+}
+.app-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow-x: hidden;
+  }
+.txt {
+    font-weight: bold;
+    font-size: 13px; 
+    line-height: 2;
+}
+.txt_comp {
+  font-weight: bold;
+  font-size: 11px; 
+  line-height: 2;
+}
+.overlay-container {
+    position: relative;
+    top: 100px; 
+    left: 0;
+    height: calc(100% - 100px);
+    background-color: rgba(255, 255, 255, 0.8); 
+    padding: 20px;
+    z-index: 1; 
+    overflow-y: auto; 
+    overflow-x: hidden;
+  }
+  .header_col {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    border-radius: 10px;
+    border: 1px solid lightgray;
+  }
+
+  .online {
+    width: 50px; 
+    height: 50px;
+    background-color: #028E76; 
+    border-radius: 50%; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    font-size: 18px; 
+    margin: 5px;
+  }
+  .offline {
+    width: 50px; 
+    height: 50px;
+    background-color: #c5067c; 
+    border-radius: 50%; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white; 
+    font-weight: bold;
+    font-size: 18px;
+    margin: 5px;
+  }
+
+  .online-mini {
+    width: 30px; 
+    height: 30px;
+    background-color: #028E76; 
+    border-radius: 50%; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px; 
+  }
+  .offline-mini  {
+    width: 30px; 
+    height: 30px;
+    background-color: #c5067c; 
+    border-radius: 50%; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white; 
+    font-weight: bold;
+    font-size: 14px; 
+  }
+  .blink {
+    animation: blink-animation 2s steps(5, start) infinite;
+    -webkit-animation: blink-animation 2s steps(5, start) infinite;
+  }
+  @keyframes blink-animation {
+    to {
+      visibility: hidden;
+    }
+  }
+  @-webkit-keyframes blink-animation {
+    to {
+      visibility: hidden;
+    }
+  }
+
+  .logout-button {
+    color: #c5067c;
+    border: 2px solid #c5067c;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    width: 76px;
+    height: 63px;
+}
+.save-button {
+  background-color: #a8c6bb;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  width: 76px;
+  height: 63px;
+  float: right;
+  border: 2px solid #12af83;
+}
+.save-button-offline {
+  background-color: #fdd0bb;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  width: 76px;
+  height: 63px;
+  float: right;
+}
+.nav_icon {
+  height: 22px;
+  padding-inline: 5px;
+}
+
+.img_icon {
+  width: 56px;
+  height: 23px;
+}
+
+.fa-sign-out-alt {
+    margin-right: 8px;
+}
+
+.countdown {
+  font-size: 1.6rem;
+  font-weight: bold;
+  margin: 10px;
+}
+
+.bg-header {
+  background-color: #d6e0ea;
+}
+
+.bg-header {
+  background-color: #d6e0ea;
+}
+
+.img_loading {
+  max-width: 100px;
+  height: auto;
+}
+.loading-spinner {
+  display: flex;
+  align-items: center;
+}
+
+.loading-image {
+  flex: 1;
+}
+
+.loading-text {
+  font-family: 'Courier New', Courier, monospace;
+  flex: 1; 
+  text-align: center; 
+  font-weight: bold;
+  font-size: 18px;
+  color: cornflowerblue;
+}
+
+.form-check-input {
+  cursor: pointer;
+}
