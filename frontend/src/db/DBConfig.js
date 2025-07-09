@@ -1,4 +1,3 @@
-
 import Dexie from 'dexie';
 
 function DBConfig() {

@@ -15,7 +15,7 @@ self.addEventListener('install', event => {
     //     caches.open(CACHE_NAME)
     //         .then(cache => cache.addAll(urlsToCache))
     // );
-    self.skipWaiting();
+    self.skipWaiting(); // Force the waiting service worker to become the active service worker
 });
 
 // Activate event: clean up old caches
@@ -28,7 +28,7 @@ self.addEventListener('activate', event => {
             )
         )
     );
-    self.clients.claim();
+    self.clients.claim(); //take control of all open clients immediately
 });
 
 const isGET = (request) => request.method === 'GET';

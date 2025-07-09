@@ -140,8 +140,17 @@ class Registration extends Component {
 		const compress_content = LZString.compress(content);
 		const endTime = performance.now();
 		if (!existingRecord) {
-			await table.add({ media_id: media_id, content: compress_content, db_size: content.length, db_compress_size: compress_content.length, time_comp: Math.round(endTime - startTime), type: type, filename: filename });
+			await table.add({ 
+				media_id: media_id, 
+				content: compress_content, 
+				db_size: content.length, 
+				db_compress_size: compress_content.length, 
+				time_comp: Math.round(endTime - startTime), 
+				type: type, 
+				filename: filename 
+			});
 		}
+		this.compressedContentLength += compress_content.length;
 	}
 
 	async getOfflineUserTest(email, fingerprint) {
@@ -220,12 +229,13 @@ class Registration extends Component {
 					const duration = exam.duration;
 					const total_points = exam.total_points;
 					await this.storeUser(user.uid, user.email, user.user_name, exam.tid, this.state.fingerprint);
+					this.compressedContentLength = 0;
 					for (let i = 0; i < media.length; i++) {
 						const md = media[i];
 						await this.storeMedia(md.media_id, md.content, md.type, md.filename);
 					}
+					console.log(`Compressed Media Size: ${this.compressedContentLength/(1024*1024)} MB`);
 					await this.storeUserExam(exam.tid, user.uid, exam.answers, exam.completed, exam.points);
-					console.log(exam);
 					await this.storeExam(exam.tid, exam, duration, total_points);
 					this.setState({ points: exam.points , maxPoints: total_points });
 
