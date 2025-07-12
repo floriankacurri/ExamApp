@@ -33,6 +33,7 @@ class ExamForm extends Component {
 			uid: 0,
 			userName: '',
 			points: 0,
+			timeFinished: false,
 			showLogoutModal: false,
 			showSaveModal: false,
 			showResultModal: false,
@@ -80,18 +81,23 @@ class ExamForm extends Component {
 
 	handleBeforeUnload = (event) => {
 		event.preventDefault();
-		toast.error("Can't reload the page!", {
-			position: toast.POSITION.TOP_CENTER,
-			autoClose: 5000,
-			hideProgressBar: false,
-			closeOnClick: true,
-			pauseOnHover: true,
-			draggable: true,
-			progress: undefined,
-			theme: "light",
-		});
+		this.throwError("Can't reload the page!");
 		event.returnValue = '';
 	}
+	
+	getFrontendUrl = () => {
+		const { protocol, hostname, port } = window.location;
+		const currentPort = port ? `:${port}` : '';   // only include if non-empty
+		return `${protocol}//${hostname}${currentPort}`;
+	};
+
+	getBackendUrl = () => {
+		const { protocol, hostname, port } = window.location;
+		if (hostname !== 'localhost') return process.env.REACT_APP_BACKEND_API_URL;
+		const apiPort = (hostname === 'localhost') ? ':5000' : '';
+		return `${protocol}//${hostname}:5000`;
+	};
+
 
 	async getExam() {
 		const tid = this.props.tid;
@@ -117,7 +123,7 @@ class ExamForm extends Component {
 			options: JSON.parse(q.json).options.split(',').map((sb) => sb.trim()), 
 			content_type: this.media.find(item => item.media_id === q.media_id) ? this.media.find(item => item.media_id === q.media_id).type : "", 
 			content: this.media.find(item => item.media_id === q.media_id) ? this.media.find(item => item.media_id === q.media_id).content : "", 
-			url: this.media.find(item => item.media_id === q.media_id) ? "http://" + endpoint + ":3000/media/" +  this.media.find(item => item.media_id === q.media_id).filename : "" 
+			url: this.media.find(item => item.media_id === q.media_id) ? `${this.getFrontendUrl()}/media/` +  this.media.find(item => item.media_id === q.media_id).filename : "" 
 		}));
 		this.questions = questionsArr;
 		const tableUsers = await this.db.table('users');
@@ -143,9 +149,32 @@ class ExamForm extends Component {
 		this.props.onLogout();
 	}
 
+	throwError = (errorMsg) => {
+		toast.error(errorMsg, {
+			position: toast.POSITION.TOP_CENTER,
+			autoClose: 5000,
+			hideProgressBar: false,
+			closeOnClick: true,
+			pauseOnHover: true,
+			draggable: true,
+			progress: undefined,
+			theme: "light",
+		});
+	};
+	
 	handleInputChange = (event) => {
 		const { id, name, value, checked, type } = event.target;
 		const answers = this.answers;
+		const savedTime = localStorage.getItem(`time-exam-${this.props.tid}-${this.props.uid}`);
+		if (savedTime) {
+			const parsedTime = JSON.parse(savedTime);
+			const elapsedTime = parsedTime.elapsedTime / 1000 / 60; // Convert milliseconds to minutes
+			console.log('Elapsed Minutes', elapsedTime);
+			if (elapsedTime >= parseInt(this.exam.duration)) {
+				this.finishExam();
+				return;
+			}
+		}
 		const currentAnswer = answers.find((answ) => answ.qid === name.replace("qu-",""));
 		if (currentAnswer){
 			const index = answers.indexOf(currentAnswer);
@@ -183,14 +212,38 @@ class ExamForm extends Component {
 		this.saveAnswers(answers);
 	};
 
+	finishExam () {
+		this.throwError("Koha e provimit ka përfunduar!");
+		if (this.state.isOnline){
+			const answers = this.answers;
+			const questionIds = this.questions.map(q => q.id);
+			const doneQuestionIds = answers.map(answ => answ.qid);
+			let allAnswers = [];
+			for (let q of questionIds) {
+				if (!doneQuestionIds.includes(q)) {
+					allAnswers.push({qid: q, answer: ""});
+				}
+			} 
+			const ans = [
+				...this.answers,
+				...allAnswers
+			];
+			this.setState({ answers: ans, timeFinished: true, completed: true }, async () => {
+				console.log("All answers", this.state.answers);
+				await this.handleSave();
+			});
+		} else {
+			this.setState({ timeFinished: true, completed: true });
+		}
+	}
+
 	async handleSave() {
 		this.setState({showSaveModal: false, showLoading: true});
-		const endpoint = window.location.hostname;
-		const apiUrl = 'http://' + endpoint + ':5000/api/submitexam';
+		const apiUrl = `${this.getBackendUrl()}/api/submitexam`;
 		try {
 			console.log('this.state.answers', this.state.answers);
-
-			const response = await axios.post(apiUrl, {'tid': this.state.tid, 'uid': this.state.uid, 'answers': this.state.answers});
+			debugger;
+			const response = await axios.post(apiUrl, {'tid': this.state.tid, 'uid': this.state.uid, 'answers': this.state.answers, 'timeFinished': this.state.timeFinished});
 			const resp = response.data;
 			if(resp.success == true){
 				toast.success(resp.msg, {
@@ -206,33 +259,17 @@ class ExamForm extends Component {
 				if(resp.completed == true){
 					localStorage.removeItem(`time-exam-${this.props.tid}-${this.props.uid}`);
 					await this.completeExam(resp.pointsTotal);
-					this.setState({points: resp.pointsTotal, maxPoints: resp.maxPoints,completed: resp.completed, showResultModal: true});
+					this.setState({points: resp.pointsTotal, maxPoints: resp.maxPoints, completed: resp.completed, showResultModal: true});
 				}
-			} else{
-				toast.error(resp.error_msg, {
-					position: toast.POSITION.TOP_CENTER,
-					autoClose: 5000,
-					hideProgressBar: false,
-					closeOnClick: true,
-					pauseOnHover: true,
-					draggable: true,
-					progress: undefined,
-					theme: "light", 
-				});
+			} else {
+				this.throwError(resp.error_msg);
 			}
 			this.setShowLoading(false);
 		} catch (error) {
 			this.setShowLoading(false);
-			toast.error(error.message, {
-				position: toast.POSITION.TOP_CENTER,
-				autoClose: 5000,
-				hideProgressBar: false,
-				closeOnClick: true,
-				pauseOnHover: true,
-				draggable: true,
-				progress: undefined,
-				theme: "light",
-			});
+			this.throwError(error.message);
+
+			console.error('Error submitting exam:', error);
 		}
 	};
 
@@ -243,17 +280,16 @@ class ExamForm extends Component {
 	handleOffline = () => {
 		console.log('handleOffline');
 		let ids = this.state.compressedIds;
-		console.log('ids', ids);
 		let noComps = 0;
 		const startTime = performance.now();
 
 		for (let i=0; i< this.media.length; i++){
-		if(!ids.includes(this.media[i].media_id)){
-			let decompressed_content = LZString.decompress(this.media[i].content);
-			this.media[i].content = decompressed_content;
-			noComps += 1;
-			ids.push(this.media[i].media_id);
-		}
+			if(!ids.includes(this.media[i].media_id)){
+				let decompressed_content = LZString.decompress(this.media[i].content);
+				this.media[i].content = decompressed_content;
+				noComps += 1;
+				ids.push(this.media[i].media_id);
+			}
 		}
 		const endTime = performance.now();
 		const noActual = this.state.decompress_no;
@@ -297,7 +333,7 @@ class ExamForm extends Component {
 				record.answers = answersList;
 			});
 		} catch (error) {
-		console.error('Error updating or adding record:', error);
+			console.error('Error updating or adding record:', error);
 		}
 	}
 
@@ -357,6 +393,7 @@ class ExamForm extends Component {
 							checked={answers.find(item => item.qid === question.id) ? answers.find(item => item.qid === question.id).answer === option : false}
 							onChange={this.handleInputChange}
 							value={option}
+							disabled={this.state.timeFinished} // Disable input if exam is finished
 						/>
 						<label className="form-check-label float-start ms-2" htmlFor={`radio-${index}`}>
 							{option}
@@ -373,6 +410,7 @@ class ExamForm extends Component {
 							name={`qu-${question.id}`}
 							value={option}
 							onChange={this.handleInputChange}
+							disabled={this.state.timeFinished} // Disable input if exam is finished
 						/>
 						<label className="form-check-label float-start ms-2" htmlFor={`checkbox-${index}`}>
 							{option}
@@ -388,6 +426,7 @@ class ExamForm extends Component {
 							value={answers.find(item => item.qid === question.id) ? answers.find(item => item.qid === question.id).answer : ""}
 							name={`qu-${question.id}`}
 							onChange={this.handleInputChange}
+							disabled={this.state.timeFinished} // Disable input if exam is finished
 						/>
 					</div>
 				)}
@@ -435,7 +474,12 @@ class ExamForm extends Component {
 								<Offline polling={pollingConfig}>
 									<div className='offline blink'>OFF</div>
 								</Offline>
-								<Stopwatch tid={this.props.tid} uid={this.props.uid}/>
+								<Stopwatch 
+									tid={this.props.tid} 
+									uid={this.props.uid} 
+									maxTime={this.exam.duration}
+									finishExam={this.finishExam.bind(this)}
+								/>
 							</div>
 							<div className='col col-8 txt d-flex flex-column justify-content-center align-items-center header-info border h-100'>
 								<div className='d-flex justify-content-center align-items-center column-gap-4 w-100 h-50'>

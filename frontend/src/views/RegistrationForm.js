@@ -120,7 +120,7 @@ class Registration extends Component {
 				const anws = answers[i];
 				const exists = local_answers.some((item) => item.qid === anws.qid);
 				if (!exists) {
-					local_answers.append(anws);
+					local_answers.push(anws);
 				}
 			}
 			await table.where('tid').equals(tid).and(row => row.uid == uid).modify(record => {
@@ -202,13 +202,27 @@ class Registration extends Component {
 		});
 	};
 
+	getFrontendUrl = () => {
+		const { protocol, hostname, port } = window.location;
+		const currentPort = port ? `:${port}` : '';   // only include if non-empty
+		return `${protocol}//${hostname}${currentPort}`;
+	};
+
+	getBackendUrl = () => {
+		const { protocol, hostname, port } = window.location;
+		console.log('REACT_APP_BACKEND_API_URL', process.env.REACT_APP_BACKEND_API_URL);
+		
+		if (hostname !== 'localhost') return process.env.REACT_APP_BACKEND_API_URL;
+		const apiPort = (hostname === 'localhost') ? ':5000' : '';
+		return `${protocol}//${hostname}:5000`;
+	};
+
 	handleSubmit = async (event) => {
 		event.preventDefault();
 		this.setShowLoading(true);
 		try {
 			if (this.state.isOnline) {
-				const endpoint = window.location.hostname;
-				const apiUrl = 'http://' + endpoint + ':5000/api/go2exam';
+				const apiUrl = `${this.getBackendUrl()}/api/go2exam`;
 				if (!this.state.name.length){
 					this.throwError("Ju lutem plotesoni emrin !");
 					this.setShowLoading(false);

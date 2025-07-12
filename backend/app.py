@@ -13,9 +13,9 @@ db = pymysql.connect(
     database='exams',
 )
 
-
 @app.route('/api/go2exam', methods=['POST'])
 def go2exam():
+    db.ping(reconnect=True)
     email = request.json.get('email')
     name = request.json.get('name')
     fingerprint = request.json.get('fingerprint')
@@ -174,21 +174,24 @@ def getQuestions(cursor, uid, tid):
 
 
 def getMedias(cursor, tid):
-    cursor.execute(
-        f"""select id, content, type, fileName 
-            from media where id in (select media_id 
-                                    from question 
-                                    where id in (select question_id from test_question where test_id = '{tid}'))"""
+    cursor.execute(f"""
+        select id, content, type, fileName 
+        from media 
+        where id in (select media_id 
+                    from question 
+                    where id in (select question_id from test_question where test_id = '{tid}'))"""
     )
     return cursor.fetchall()
 
 
 @app.route('/api/submitexam', methods=['POST'])
 def submitexam():
+    db.ping(reconnect=True)
     cursor = db.cursor()
     tid = request.json.get('tid')
     uid = request.json.get('uid')
     answers = request.json.get('answers')
+    time_finished = request.json.get('timeFinished', False)
     stm_select_user_test = "select test_id,user_points,completed from user_tests where user_id = %s and test_id = %s"
     user_tests = cursor.execute(stm_select_user_test, (uid, tid))
     if user_tests is None:
@@ -203,6 +206,7 @@ def submitexam():
             return jsonify(msg)
         else:
             if (isinstance(answers, list)):
+                print(answers)
                 for answ in answers:
                     answer = answ['answer']
                     qid = answ['qid']
@@ -233,27 +237,53 @@ def submitexam():
                             point = round((totalA / len(arr_corr)) * qpoint)
                     else:
                         point += qpoint if answer == qansw else 0
-
+                    print('Answer:', answer, 'Point:', point, 'QType:', qtype, 'QAns:', qansw, 'QPoint:', qpoint)
                     if existsANS:
                         if len(answer) == 0:
                             cursor.execute(
                                 "delete from user_answers where test_question_id = %s and user_id = %s ", (qtid, uid))
                         else:
-                            cursor.execute("update user_answers set answer = %s, is_correct = %s , points = %s, answer_date = CURRENT_TIMESTAMP() where test_question_id = %s and user_id = %s ", (
-                                answer, 1 if point > 0 else 0, point, qid, uid))
+                            cursor.execute("""
+                                update user_answers set 
+                                answer = %s, 
+                                is_correct = %s, 
+                                points = %s, 
+                                answer_date = CURRENT_TIMESTAMP() 
+                                where test_question_id = %s and user_id = %s
+                            """, (answer, 1 if point > 0 else 0, point, qid, uid))
                     else:
-                        if len(answer) > 0:
-                            cursor.execute("insert into user_answers(answer, is_correct, points, test_question_id, user_id, answer_date) VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP()) ", (
-                                answer, 1 if point > 0 else 0, point, qid, uid))
+                        if len(answer) > 0 or time_finished:
+                            cursor.execute("""
+                                insert into user_answers (answer, is_correct, points, test_question_id, user_id, answer_date) 
+                                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP()) 
+                            """, (answer, 1 if point > 0 else 0, point, qid, uid))
 
-                cursor.execute("""update user_tests ut set
-                                user_points = IFNULL((select sum(points) 
-                                                        from user_answers ua 
-                                                        where user_id = %s and test_question_id in ( select id from test_question where test_id = %s )),0),
-                                completed = case when (select count(*) 
-                                                        from user_answers ua 
-                                                        where user_id = %s and test_question_id in ( select id from test_question where test_id = %s )) = ( select count(*) from test_question where test_id = %s ) then 1 else 0 end
-                                where user_id = %s and test_id = %s """, (uid, tid, uid, tid, tid, uid, tid))
+                cursor.execute("""
+                    update user_tests ut set
+                    user_points = IFNULL(
+                        (
+                            select sum(points) 
+                            from user_answers ua 
+                            where user_id = %s and test_question_id in ( select id from test_question where test_id = %s )
+                        ),
+                        0
+                    ),
+                    completed = case 
+                        when (
+                            select count(*) 
+                                from user_answers ua 
+                                where user_id = %s 
+                                    and test_question_id in ( select id from test_question where test_id = %s )
+                        ) = ( 
+                            select count(*) 
+                            from test_question 
+                            where test_id = %s 
+                        ) 
+                        then 1 
+                        else 0 
+                    end
+                    where user_id = %s and test_id = %s """, (uid, tid, uid, tid, tid, uid, tid)
+                )
 
                 cursor.execute(
                     "select completed, user_points from user_tests where user_id = %s and test_id = %s", (uid, tid))
