@@ -79,11 +79,17 @@ class ExamForm extends Component {
 		window.removeEventListener('beforeunload', this.handleBeforeUnload);
 	}
 
+	// componentDidUpdate(prevProps, prevState) {
+	// 	console.log('Component Updated');
+		
+	// 	this.checkExamTime();
+	// }
+
 	handleBeforeUnload = (event) => {
 		event.preventDefault();
 		this.throwError("Can't reload the page!");
 		event.returnValue = '';
-	}
+	};
 	
 	getFrontendUrl = () => {
 		const { protocol, hostname, port } = window.location;
@@ -97,7 +103,6 @@ class ExamForm extends Component {
 		const apiPort = (hostname === 'localhost') ? ':5000' : '';
 		return `${protocol}//${hostname}:5000`;
 	};
-
 
 	async getExam() {
 		const tid = this.props.tid;
@@ -162,6 +167,19 @@ class ExamForm extends Component {
 		});
 	};
 	
+	checkExamTime = () => {
+		const savedTime = localStorage.getItem(`time-exam-${this.props.tid}-${this.props.uid}`);
+		if (savedTime) {
+			const parsedTime = JSON.parse(savedTime);
+			const elapsedTime = parsedTime.elapsedTime / 1000 / 60; // Convert milliseconds to minutes
+			console.log('Elapsed Minutes', elapsedTime);
+			if (elapsedTime >= parseInt(this.exam.duration)) {
+				this.finishExam();
+				return;
+			}
+		}
+	};	
+
 	handleInputChange = (event) => {
 		const { id, name, value, checked, type } = event.target;
 		const answers = this.answers;
@@ -242,7 +260,6 @@ class ExamForm extends Component {
 		const apiUrl = `${this.getBackendUrl()}/api/submitexam`;
 		try {
 			console.log('this.state.answers', this.state.answers);
-			debugger;
 			const response = await axios.post(apiUrl, {'tid': this.state.tid, 'uid': this.state.uid, 'answers': this.state.answers, 'timeFinished': this.state.timeFinished});
 			const resp = response.data;
 			if(resp.success == true){
@@ -274,7 +291,11 @@ class ExamForm extends Component {
 	};
 
 	handleOnline = () => {
-		this.setState({ isOnline: true });
+		this.setState({ isOnline: true }, () => {
+			if (this.state.timeFinished) {
+				this.finishExam();
+			}
+		});
 	}
 
 	handleOffline = () => {
